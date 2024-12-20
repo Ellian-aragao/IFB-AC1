@@ -6,8 +6,8 @@ vetor: .word 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 main: 
   la $a0, vetor        # argumento de endereço do vetor
   addi $a1, $zero, 0   # argumento de índice inicial do vetor
-  addi $a2, $zero, 10  # argumento de índice final do vetor
-  addi $a3, $zero, 4   # argumento de elemento a ser buscado
+  addi $a2, $zero, 9   # argumento de índice final do vetor
+  addi $a3, $zero, 15  # argumento de elemento a ser buscado
   jal busca_binaria    # chama função de busca binária
   add $a0, $v0, $zero  # carrega resultado da busca para print
   jal print_integer    # chama função de print do resultado
@@ -26,19 +26,41 @@ busca_binaria:
     slt $t5, $a2, $a1               # offset final < offset inicial ? 1 : 0
     bne $t5, $zero, nao_encontrado  # 0 => chama procedimento de retorno não encontrado
 
+  verifica_extremidade_esquerda:
+    add $t0, $a1, $zero             # t0 = índice elemento esquerdo
+    sll $t3, $a1, 2                 # offset = índice do inicio vetor * 4 bytes
+    add $t1, $t3, $a0               # &elemento esquerdo = offset + &vetor
+    lw  $t3, 0($t1)                 # carrega valor do elemento esquerdo do vetor
+    beq $a3, $t3, conclui           # elemento esquerdo == elemento buscado => conclui
+    slt $t2, $t3, $a3               # elemento esquerdo < elemento buscado ? 1 : 0
+    beq $t2, $zero, nao_encontrado  # elemento esquerdo < elemento buscado => nao encontrado
+
+  verifica_extremidade_direita:
+    add $t0, $a2, $zero             # t0 = índice elemento direito
+    sll $t3, $a2, 2                 # offset = índice do final vetor * 4 bytes
+    add $t1, $t3, $a0               # &elemento direito = offset + &vetor
+    lw  $t3, 0($t1)                 # carrega valor do elemento direito do vetor
+    beq $a3, $t3, conclui           # elemento direito == elemento buscado => conclui
+    slt $t2, $a3, $t3               # elemento buscado < elemento direito ? 1 : 0
+    beq $t2, $zero, nao_encontrado  # elemento buscado < elemento direito => nao encontrado
+
+  verifica_intervalo_vazio:
+    addi $t0, $a1, 1             # tmp = indice inicial + 1
+    beq $t0, $a2, nao_encontrado # executa não encontrado
+
+
   divide_indice_mais_um:
-    srl $t0, $a2, 1                # índice do meio = offset final / 2
+    sub $t0, $a2, $a1              # delta indice = indice final - indice inicial
+    srl $t0, $t0, 1                # índice do meio = delta indice / 2
     andi $t6, $a2, 1               # eh_impar = índice meio % 2
-    beq $t6, $a2, carrega_indice   # eh_impar == indice meio => carrega_indice
-    add $t0, $t0, $t6              # índice meio += eh_impar
+    #add $t0, $t0, $t6              # índice meio += eh_impar
+    add $t0, $t0, $a1              # índice meio += indice inicial
 
   carrega_indice:
-    sll $t1, $t0, 2       # índice do meio do vetor * 4 bytes
-    add $t1, $t1, $a0     # offset do endereço do elemento do meio do vetor
+    sll $t1, $t0, 2       # offset para calc do &vetor = índice do meio do vetor * 4 bytes
+    add $t1, $t1, $a0     # endereço elemento = offset indice + &vetor
     lw  $t3, 0($t1)       # carrega valor do elemento do meio do vetor
-
-  verifica_elemento_encontrado:
-    beq $a3, $t3, conclui # elemento do meio = elemento buscado => conclui
+    beq $a3, $t3, conclui # elemento do meio == elemento buscado => conclui
 
   verifica_lado_busca:
     slt $t4, $t3, $a3     # elemento do meio < valor procurado ? 1 : 0
@@ -74,5 +96,6 @@ print_integer:
   jr $ra             # retorna para ultima instrução a chamar a função
 
 exit:
-  addi $v0, $zero, 10  # carrega como argumento a chamada exit
-  syscall              # finaliza o programa
+  addi $v0, $zero, 17   # carrega como argumento a chamada exit
+  add $a0, $zero, $zero # carrega valor zero como retorno da chamada exit
+  syscall               # finaliza o programa
