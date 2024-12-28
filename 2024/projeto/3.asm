@@ -49,22 +49,23 @@ main:
 # Functions
 
 # https://stackoverflow.com/questions/53039818/understanding-the-strcmp-function-of-gnu-libc
-# int strcmp (const char *p1, const char *p2)
+# int strcmp (const char *p1, const char *p2) p1 > p2 => -1 | p1 == p2 => 0 | p2 > p1 => 1
 strcmp:
   while_strcmp:
     lb $t0, 0($a0)       # carrega primeiro byte do argumento a0
     lb $t1, 0($a1)       # carrega primeiro byte do argumento a1
 
-    beq $t0, $zero retorna_subtracao # break
+    beq $t0, $zero retorna_subtracao # caractere '\0' => break
 
     incrementa_endereco_string:
-      addi $a0, $a0, 8   # a0 += 8 bytes => endereço próximo caractere
-      addi $a1, $a1, 8   # a1 += 8 bytes => endereço próximo caractere
+      addi $a0, $a0, 1   # endereço próximo caractere
+      addi $a1, $a1, 1   # endereço próximo caractere
 
     beq $t0, $t1, while_strcmp
 
-  subu $v0, $t0, $t1  # v0 = t0 - t1
-  jr $ra              # retorna para ultima instrução a chamar a função
+  retorna_subtracao:
+    subu $v0, $t0, $t1  # v0 = t0 - t1
+    jr $ra              # retorna para ultima instrução a chamar a função
 
 abre_arquivo_leitura:
   addi $v0, $zero, 13   # código para abrir arquivo
