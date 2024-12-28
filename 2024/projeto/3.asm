@@ -67,6 +67,25 @@ strcmp:
     subu $v0, $t0, $t1  # v0 = t0 - t1
     jr $ra              # retorna para ultima instrução a chamar a função
 
+# void memcpy(void *dest_str, const void * src_str, size_t n)
+memcpy:
+  addiu $t0, $zero, 1         # inicializa contador
+
+  for_memcpy:
+    lb $t1, 0($a1)            # carrega primeiro byte do argumento a0
+    sb $t1, 0($a0)            # *dest_str = *src_str
+
+    incrementa_endereco_memoria:
+      addi $a0, $a0, 1        # endereço próximo caractere
+      addi $a1, $a1, 1        # endereço próximo caractere
+
+    beq $t0, $a2, end_memcpy  # valida se copiou todos os bytes
+    addiu $t0, $t0, 1         # incrementa contador
+    j for_memcpy              # retorna no for_memcpy
+
+  end_memcpy:
+    jr $ra                    # retorna para ultima instrução a chamar a função
+
 abre_arquivo_leitura:
   addi $v0, $zero, 13   # código para abrir arquivo
   addi $a1, $zero, 0    # seleciona flag de read-only
