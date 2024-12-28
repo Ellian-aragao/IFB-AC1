@@ -49,7 +49,7 @@ main:
 # Functions
 
 # https://stackoverflow.com/questions/53039818/understanding-the-strcmp-function-of-gnu-libc
-# int strcmp (const char *p1, const char *p2) p1 > p2 => -1 | p1 == p2 => 0 | p2 > p1 => 1
+# int strcmp (const char *p1, const char *p2) p1 > p2 => 1 | p1 == p2 => 0 | p1 < p2 => -1
 strcmp:
   while_strcmp:
     lb $t0, 0($a0)       # carrega primeiro byte do argumento a0
@@ -64,6 +64,25 @@ strcmp:
     beq $t0, $t1, while_strcmp
 
   retorna_subtracao:
+    subu $v0, $t0, $t1  # v0 = t0 - t1
+    jr $ra              # retorna para ultima instrução a chamar a função
+
+# int memcmp ( const void * p1, const void * p2, size_t num ) p1 > p2 => 1 | p1 == p2 => 0 | p1 < p2 => -1
+memcmp:
+  addiu $t2, $zero, 1         # inicializa contador
+
+  while_memcmp:
+    lb $t0, 0($a0)       # carrega primeiro byte do argumento a0
+    lb $t1, 0($a1)       # carrega primeiro byte do argumento a1
+
+    # incrementa endereco string
+    addi $a0, $a0, 1   # endereço próximo caractere
+    addi $a1, $a1, 1   # endereço próximo caractere
+
+    beq $t2, $a2  retorna_subtracao_memcmp
+    beq $t0, $t1, while_strcmp # *p1 == *p2 => while_strcmp
+
+  retorna_subtracao_memcmp:
     subu $v0, $t0, $t1  # v0 = t0 - t1
     jr $ra              # retorna para ultima instrução a chamar a função
 
