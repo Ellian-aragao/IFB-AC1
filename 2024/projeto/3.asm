@@ -79,7 +79,7 @@ memcmp:
     addi $a0, $a0, 1   # endereço próximo caractere
     addi $a1, $a1, 1   # endereço próximo caractere
 
-    beq $t2, $a2  retorna_subtracao_memcmp
+    beq $t2, $a2, retorna_subtracao_memcmp
     beq $t0, $t1, while_strcmp # *p1 == *p2 => while_strcmp
 
   retorna_subtracao_memcmp:
@@ -104,6 +104,35 @@ memcpy:
 
   end_memcpy:
     jr $ra                    # retorna para ultima instrução a chamar a função
+
+# int atoi (const char * str)
+atoi:
+  add $v0, $zero, $zero  # inicializa o resultado com zero
+  addi $t3, $zero, 10    # inicializa o offset decimal
+  li $t2, '9'            # inicializa t2 = '9'
+
+  while_atoi:
+    lb $t0, 0($a0)       # carrega primeiro byte do argumento a0
+
+    verifica_fim_numero:
+      beq $t0, '\0', retorna_atoi # caractere '\0' => break
+      beq $t0, '\n', retorna_atoi # caractere '\n' => break
+
+    verifica_limites_numeros:
+      slti $t1, $t0, '0'       # caracter < '0' ? 1 : 0
+      beq $t1, 1, retorna_atoi # caracter < '0' => break
+      slt $t1, $t2, $t0        # caracter < '9' ? 1 : 0
+      beq $t1, 1, retorna_atoi # caracter < '9' => break
+
+    subi $t1, $t0, '0'         # valor inteiro = char - offset do '0'
+    mul $v0, $v0, $t3          # retorno = retorno * 10
+    add $v0, $v0, $t1          # resultado += valor inteiro
+
+    addi $a0, $a0, 1     # endereço próximo caractere
+    j while_atoi         # volta ao loop while
+
+  retorna_atoi:
+    jr $ra              # retorna para ultima instrução a chamar a função
 
 abre_arquivo_leitura:
   addi $v0, $zero, 13   # código para abrir arquivo
