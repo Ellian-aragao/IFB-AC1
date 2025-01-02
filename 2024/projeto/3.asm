@@ -1,11 +1,12 @@
 .data
   erro_le_arquivo_str: .asciiz "Erro ao ler arquivo"
   erro_abrir_arquivo:  .asciiz "Erro ao abrir arquivo"
-  nome_arquivo:        .asciiz "/home/ellian/code/faculdade/IFB-AC1/2024/projeto/sample/t2.txt"
+  nome_arquivo:        .asciiz "/Users/ellian/code/faculdade/IFB-AC1/2024/projeto/sample/t2.txt"
 
-  buffer:              .space 1024  # buffer para armazenar o conteúdo do arquivo
+  buffer:              .space 400  # buffer para armazenar o conteúdo do arquivo
   buffer_ano:          .space 40    # buffer para armazenar o ano do arquivo
 
+  size_buffer:         .word 50 # quantidade de caracteres que o buffer suporta
   size_ano:            .word 4  # quantidade de caracteres para ano
   size_ignore:         .word 4  # quantidade de caracteres para ignorar informação
 
@@ -21,9 +22,9 @@ main:
     la $a1, buffer                           # configura buffer de leitura
 
     calcula_quantos_caracteres_o_buffer_deve_ler:
-      la $t0, size_ano                       # carrega endereço tamanho das strings ano
+      la $t0, size_buffer                    # carrega endereço tamanho do buffer
       lw $t0, ($t0)                          # carrega valor do endereço do tamanho do buffer
-      add $a2, $t2, $zero                    # configura numero de caracteres para leitura
+      add $a2, $t0, $zero                    # configura numero de caracteres para leitura
 
     le_arquivo_e_finaliza_se_eof:
       jal le_arquivo                           # chama leitura de arquivo
@@ -34,8 +35,11 @@ main:
       bne $t0, $zero, erro_le_arquivo  # retorno leitura arquivo < 0 => encerra processo com erro
 
     carrega_chamada_print_da_leitura_retorna_loop:
-      la $a0, buffer_ano               # configura buffer de escrita
+      la $a0, buffer                   # configura buffer de escrita
       jal print_string                 # chama procedimento de print da string
+      # copiar string até caracter de quebra de linha para outro buffer
+      # interpretar linha do arquivo
+      #   ler 4 bytes do ano, ignorar 4 próximos bytes, separar buffer do valor inteiro
 
     j loop                           # volta no loop
 
@@ -66,6 +70,24 @@ strcmp:
   retorna_subtracao:
     subu $v0, $t0, $t1  # v0 = t0 - t1
     jr $ra              # retorna para ultima instrução a chamar a função
+
+# int strchr (const char *str, const char arg1)
+strchr:
+  li $v0, 0            # inicializa contador com zero
+
+  while_find_char:
+    lb $t0, 0($a0)               # carrega byte do argumento str
+
+    beq $t0, '\0', strchr_return # caractere == '\0' => break
+    beq $t0, $a1, strchr_return  # caractere == arg1 => break
+
+    addi $a0, $a0, 1             # endereço próximo caractere
+    addi $v0, $v0, 1             # incrementa contador
+
+    j while_find_char
+
+  strchr_return:
+    jr $ra
 
 # int memcmp ( const void * p1, const void * p2, size_t num ) p1 > p2 => 1 | p1 == p2 => 0 | p1 < p2 => -1
 memcmp:
