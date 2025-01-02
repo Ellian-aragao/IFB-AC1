@@ -4,9 +4,11 @@
   nome_arquivo:        .asciiz "/Users/ellian/code/faculdade/IFB-AC1/2024/projeto/sample/t2.txt"
 
   buffer:              .space 400  # buffer para armazenar o conteúdo do arquivo
-  buffer_ano:          .space 40    # buffer para armazenar o ano do arquivo
+  buffer_ano:          .space  40  # buffer para armazenar o ano do arquivo
+  buffer_read_line:    .space 200  # buffer para armazenar linha lida 
 
   size_buffer:         .word 50 # quantidade de caracteres que o buffer suporta
+  size_buffer_line:    .word 25 # quantidade de caracteres que o buffer suporta
   size_ano:            .word 4  # quantidade de caracteres para ano
   size_ignore:         .word 4  # quantidade de caracteres para ignorar informação
 
@@ -21,22 +23,34 @@ main:
     add $a0, $s0, $zero                      # configura descritor do arquivo como argumento
     la $a1, buffer                           # configura buffer de leitura
 
-    calcula_quantos_caracteres_o_buffer_deve_ler:
-      la $t0, size_buffer                    # carrega endereço tamanho do buffer
-      lw $t0, ($t0)                          # carrega valor do endereço do tamanho do buffer
-      add $a2, $t0, $zero                    # configura numero de caracteres para leitura
+    processo_ler_arquivo:
+      calcula_quantos_caracteres_o_buffer_deve_ler:
+        la $t0, size_buffer                    # carrega endereço tamanho do buffer
+        lw $t0, ($t0)                          # carrega valor do endereço do tamanho do buffer
+        add $a2, $t0, $zero                    # configura numero de caracteres para leitura
 
-    le_arquivo_e_finaliza_se_eof:
-      jal le_arquivo                           # chama leitura de arquivo
-      beq $v0, $zero, fecha_arquivo_e_finaliza # leitura == EOF => fecha arquivo e finaliza execução
+      le_arquivo_e_finaliza_se_eof:
+        jal le_arquivo                           # chama leitura de arquivo
+        beq $v0, $zero, fecha_arquivo_e_finaliza # leitura == EOF => fecha arquivo e finaliza execução
 
-    verifica_erro_na_leitura_do_arquivo:
-      slt $t0, $v0, $zero              # retorno leitura arquivo < 0 ? 1 : 0
-      bne $t0, $zero, erro_le_arquivo  # retorno leitura arquivo < 0 => encerra processo com erro
+      verifica_erro_na_leitura_do_arquivo:
+        slt $t0, $v0, $zero              # retorno leitura arquivo < 0 ? 1 : 0
+        bne $t0, $zero, erro_le_arquivo  # retorno leitura arquivo < 0 => encerra processo com erro
 
-    carrega_chamada_print_da_leitura_retorna_loop:
-      la $a0, buffer                   # configura buffer de escrita
-      jal print_string                 # chama procedimento de print da string
+    busca_quebra_de_linha:
+      la $a0, buffer                   # configura buffer de busca da string
+      li $a1, '\n'                     # configura char para buscar na string
+      jal strchr                       # chama procedimento de busca de char
+
+    copia_linha_para_buffer:
+      la $a0, buffer_read_line         # carrega buffer para escrita
+      la $a1, buffer                   # carrega buffer para copiar
+      move $a2, $v0                    # salva resultado da função como argumento memcpy
+      jal memcpy                       # chama procedimento de cópia de buffer
+
+      la $a0, buffer_read_line
+      jal print_string                # chama procedimento de print da string
+
       # copiar string até caracter de quebra de linha para outro buffer
       # interpretar linha do arquivo
       #   ler 4 bytes do ano, ignorar 4 próximos bytes, separar buffer do valor inteiro
