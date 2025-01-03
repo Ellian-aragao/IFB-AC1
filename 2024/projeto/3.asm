@@ -21,7 +21,8 @@ main:
   jal abre_arquivo_leitura  # chama função de abrir arquivo
   add $s0, $v0, $zero       # salva descritor de arquivo
 
-  li $s4, 0                            # inicializa somador
+  li $s4, 0                 # inicializa somador
+  li $s5, 0                 # inicializa flag de print
 
   loop_buffer:
     add $a0, $s0, $zero                      # configura descritor do arquivo como argumento
@@ -35,7 +36,7 @@ main:
 
       le_arquivo_e_finaliza_se_eof:
         jal le_arquivo                           # chama leitura de arquivo
-        beq $v0, $zero, fecha_arquivo_e_finaliza # leitura == EOF => fecha arquivo e finaliza execução
+        beq $v0, $zero, valida_se_fecha_arquivo_e_finaliza # leitura == EOF => fecha arquivo e finaliza execução
 
       verifica_erro_na_leitura_do_arquivo:
         slt $t0, $v0, $zero              # retorno leitura arquivo < 0 ? 1 : 0
@@ -69,10 +70,12 @@ main:
         lb $t0, 0($t0)                    # carrega valor do endereço buffer do ano
         bne $t0, $zero, interpretar_linha_loop            # *buffer_ano != '\0' => pula para interpretação da linha
         jal escreve_ano_do_buffer_read_line_no_buffer_ano # *buffer_ano == '\0' => chama procedimento para escrita no buffer_ano
+        li $s6, 1                         # flag para indicar que não foi printado
 
       interpretar_linha_loop:
         jal interpreter_line             # chama procedimento de interpretação da string
         move $s5, $v1                    # salva retorno do valor inteiro no $s5
+        or $s6, $s6, $v0                # flag = flag | ano diferente
         # se v0 != 0 => ano diferente
         beq $v0, $zero, calcula_offset_atual_e_volta_loop # ano igual => calcula próximo endereço
         # ano diferente => print informações
@@ -90,6 +93,8 @@ main:
         la $a0, quebra_linha             # carrega endereço buffer da quebra de linha
         jal print_string                 # chama procedimento de print da string
 
+        li $s6, 0                        # flag para indicar se foi printado
+
       atualiza_valores_contador_buffer_ano:
         li $s4, 0                        # reinicializa somador
         jal escreve_ano_do_buffer_read_line_no_buffer_ano # chama procedimento para escrita no buffer_ano
@@ -100,6 +105,18 @@ main:
         addi $s3, $s3, 1                # buffer += buffer + 1
         j loop_interpreta_linha         # loop para próxima linha
 
+  valida_se_fecha_arquivo_e_finaliza:
+    la $a0, buffer_ano               # carrega endereço buffer do ano
+    jal print_string                 # chama procedimento de print da string
+
+    la $a0, espacamento              # carrega endereço buffer de espaçamento
+    jal print_string                 # chama procedimento de print da string
+
+    move $a0, $s4                    # carrega valor do somatório
+    jal print_integer                # chama procedimento de print do inteiro
+
+    la $a0, quebra_linha             # carrega endereço buffer da quebra de linha
+    jal print_string                 # chama procedimento de print da string
 
   fecha_arquivo_e_finaliza:
     add $a0, $s0, $zero            # configura descritor como argumento do fechamento de arquivo
