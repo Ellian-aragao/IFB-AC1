@@ -2,6 +2,8 @@
   erro_le_arquivo_str: .asciiz "Erro ao ler arquivo"
   erro_abrir_arquivo:  .asciiz "Erro ao abrir arquivo"
   nome_arquivo:        .asciiz "/Users/ellian/code/faculdade/IFB-AC1/2024/projeto/sample/t2.txt"
+  espacamento:         .asciiz " -> "
+  quebra_linha:        .asciiz "\n"
 
   buffer:              .space 400  # buffer para armazenar o conteúdo do arquivo
   buffer_ano:          .space  40  # buffer para armazenar o ano do arquivo
@@ -19,7 +21,7 @@ main:
   jal abre_arquivo_leitura  # chama função de abrir arquivo
   add $s0, $v0, $zero       # salva descritor de arquivo
 
-  loop:
+  loop_buffer:
     add $a0, $s0, $zero                      # configura descritor do arquivo como argumento
     la $a1, buffer                           # configura buffer de leitura
 
@@ -37,25 +39,55 @@ main:
         slt $t0, $v0, $zero              # retorno leitura arquivo < 0 ? 1 : 0
         bne $t0, $zero, erro_le_arquivo  # retorno leitura arquivo < 0 => encerra processo com erro
 
-    busca_quebra_de_linha:
-      la $a0, buffer                   # configura buffer de busca da string
-      li $a1, '\n'                     # configura char para buscar na string
-      jal strchr                       # chama procedimento de busca de char
 
-    copia_linha_para_buffer:
-      la $a0, buffer_read_line         # carrega buffer para escrita
-      la $a1, buffer                   # carrega buffer para copiar
-      move $a2, $v0                    # salva resultado da função como argumento memcpy
-      jal memcpy                       # chama procedimento de cópia de buffer
+    la $s3, buffer                       # carrega buffer para copiar
+    li $s4, 0                            # inicializa somador
 
-      la $a0, buffer_read_line
-      jal print_string                # chama procedimento de print da string
+    loop_interpreta_linha:
+      busca_quebra_de_linha:
+        move $a0, $s3                    # configura buffer de busca da string
+        li $a1, 10                       # configura char (nova linha) para buscar na string
+        jal strchr                       # chama procedimento de busca de char
+        move $s1, $v0                    # salva resultado da função
+        beq $v0, $zero, loop_buffer      # volta para loop do buffer
 
-      # copiar string até caracter de quebra de linha para outro buffer
-      # interpretar linha do arquivo
-      #   ler 4 bytes do ano, ignorar 4 próximos bytes, separar buffer do valor inteiro
+      copia_linha_para_buffer:
+        la $a0, buffer_read_line         # carrega buffer para escrita
+        move $a1, $s3                    # carrega buffer para copiar
+        move $a2, $s1                    # salva resultado da função strchr como argumento memcpy
+        jal memcpy                       # chama procedimento de cópia de buffer
 
-    j loop                           # volta no loop
+      escreve_null_final_string:
+        addi $t0, $s1, 1                 # offset resultado strchr + 1
+        la $t1, buffer_read_line         # carrega endereço buffer para escrita
+        add $t0, $t0, $t1                # t0 += endereço do buffer => endereço do próximo elemento da string
+        sb $zero, 0($t0)                 # escreve '\0' no ultimo caractere do string
+
+        jal interpreter_line             # chama procedimento de interpretação da string
+        add $s4, $s4, $v1                # s4 += retorno v1 da interpretação
+
+        # se v0 != 0 => ano diferente
+        beq $v0, $zero, calcula_offset_atual_e_volta_loop # ano igual => calcula próximo endereço
+        # ano diferente => print informações
+
+        print_informacoes:
+          la $a0, buffer_ano               # carrega endereço buffer do ano
+          jal print_string                 # chama procedimento de print da string
+
+          la $a0, espacamento              # carrega endereço buffer de espaçamento
+          jal print_string                 # chama procedimento de print da string
+
+          move $a0, $s4                    # carrega valor do somatório
+          jal print_integer                # chama procedimento de print do inteiro
+
+          la $a0, quebra_linha             # carrega endereço buffer da quebra de linha
+          jal print_string                 # chama procedimento de print da string
+
+      calcula_offset_atual_e_volta_loop:
+        add $s3, $s3, $s1               # buffer += offset strchr(buffer) => última linha do buffer '\0'
+        addi $s3, $s3, 1                # buffer += buffer + 1
+        j loop_interpreta_linha         # loop para próxima linha
+
 
   fecha_arquivo_e_finaliza:
     add $a0, $s0, $zero            # configura descritor como argumento do fechamento de arquivo
@@ -169,6 +201,58 @@ atoi:
 
   retorna_atoi:
     jr $ra              # retorna para ultima instrução a chamar a função
+
+# ($v0 != 0 => ano diferente, $v1 = valor inteiro processado) interpreter_line ()
+interpreter_line:
+  empilha_dados:
+    addi $sp, $sp, -12
+    sw $s0, 8($sp)
+    sw $s1, 4($sp)
+    sw $ra, 0($sp)
+
+  varifica_buffer_ano_vazio:
+    la $t0, buffer_ano               # carrega endereço buffer do ano
+    lb $t0, 0($t0)                   # carrega valor do endereço buffer do ano
+    bne $t0, $zero, carrega_variaveis # *buffer_ano != '\0' => carregar variáveis
+    # *buffer_ano == '\0' => copia valor atual para ano
+    la $a0, buffer_ano               # carrega endereço buffer do ano
+    la $a1, buffer_read_line         # carrega endereço buffer da linha
+    la $a2, size_ano                 # carrega endereço tamanho do buffer
+    lw $a2, ($a2)                    # carrega valor do endereço do tamanho do buffer
+    jal memcpy                       # chama procedimento de cópia da string ano
+    la $t0, buffer_ano               # carrega endereço buffer do ano
+    sb $zero, 32($t0)                # escreve '\0' no ultimo elemento do buffer
+
+  carrega_variaveis:
+    la $s0, buffer_read_line  # carrega endereço do buffer da linha
+    la $t0, buffer_ano        # carrega endereço do buffer do ano
+    la $s1, size_ano          # carrega endereço do size_ano
+    lw $s1, 0($s1)            # carrega valor do endereço size_ano
+
+  compara_tamanho_ano_com_buffer_ano:
+    move $a0, $s0             # carrega endereço do buffer da linha
+    move $a1, $t0             # carrega endereço do buffer do ano
+    move $a2, $s1             # carrega endereço do size_ano
+    jal memcmp                # chama procedimento de comparação de buffers
+    move $t4, $v0             # salva retorno memcmp em t4
+
+  obtem_valor_inteiro_str:
+    la $t3, size_ignore       # carrega endereço do size_ignore
+    lw $t3, 0($t3)            # carrega valor do endereço size_ignore
+    add $t3, $s1, $t3         # t3 = size_ano + size_ignore
+    add $a0, $s0, $t3         # t3 = offset ignore + &buffer_read_line
+    jal atoi                  # chama procedimento de conversão str para int
+
+  configura_retornos:
+    move $v1, $v0             # coloca o resultado de atoi no 2 retorno
+    move $v0, $t4             # coloca o resultado de memcmp no 1 retorno
+
+  desempilha_dados_e_retorna:
+    lw $s0, 8($sp)
+    lw $s1, 4($sp)
+    lw $ra, 0($sp)
+    addi $sp, $sp, 12
+    jr $ra
 
 abre_arquivo_leitura:
   addi $v0, $zero, 13   # código para abrir arquivo
