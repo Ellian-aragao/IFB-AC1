@@ -5,14 +5,14 @@
   espacamento:         .asciiz " -> "
   quebra_linha:        .asciiz "\n"
 
-  buffer:              .space 512  # buffer para armazenar o conteúdo do arquivo
-  buffer_ano:          .space  40  # buffer para armazenar o ano do arquivo
-  buffer_read_line:    .space 200  # buffer para armazenar linha lida 
+  buffer:              .space 1024  # buffer para armazenar o conteúdo do arquivo
+  buffer_ano:          .space  40   # buffer para armazenar o ano do arquivo
+  buffer_read_line:    .space 200   # buffer para armazenar linha lida 
 
-  size_buffer:         .word 64 # quantidade de caracteres que o buffer suporta
-  size_buffer_line:    .word 25 # quantidade de caracteres que o buffer suporta
-  size_ano:            .word 4  # quantidade de caracteres para ano
-  size_ignore:         .word 4  # quantidade de caracteres para ignorar informação
+  size_buffer:         .word 128 # quantidade de caracteres que o buffer suporta
+  size_buffer_line:    .word 25  # quantidade de caracteres que o buffer suporta
+  size_ano:            .word 4   # quantidade de caracteres para ano
+  size_ignore:         .word 4   # quantidade de caracteres para ignorar informação
 
 .text
 
@@ -57,13 +57,8 @@ main:
         la $a0, buffer_read_line         # carrega buffer para escrita
         move $a1, $s3                    # carrega buffer para copiar
         move $a2, $s1                    # salva resultado da função strchr como argumento memcpy
+        addi $a2, $a2, 1                 # soma mais um caractere para copiar quebra de linha
         jal memcpy                       # chama procedimento de cópia de buffer
-
-      escreve_null_final_string:
-        addi $t0, $s1, 1                 # offset resultado strchr + 1
-        la $t1, buffer_read_line         # carrega endereço buffer para escrita
-        add $t0, $t0, $t1                # t0 += endereço do buffer => endereço do próximo elemento da string
-        sb $zero, 0($t0)                 # escreve '\0' no ultimo caractere do string
 
       varifica_buffer_ano_vazio:
         la $t0, buffer_ano                # carrega endereço buffer do ano
@@ -261,8 +256,6 @@ escreve_ano_do_buffer_read_line_no_buffer_ano:
   la $a2, size_ano           # carrega endereço tamanho do buffer
   lw $a2, ($a2)              # carrega valor do endereço do tamanho do buffer do ano
   jal memcpy                 # chama procedimento de cópia da string ano
-  la $t0, buffer_ano         # carrega endereço buffer do ano
-  sb $zero, 32($t0)          # escreve '\0' no ultimo elemento do buffer
 
   lw $ra, 0($sp)             # desempilha dados dos registradores
   addi $sp, $sp, 4           # ajusta offset da pilha
