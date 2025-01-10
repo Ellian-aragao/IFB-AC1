@@ -5,11 +5,11 @@
   espacamento:         .asciiz " -> "
   quebra_linha:        .asciiz "\n"
 
-  buffer:              .space 1024  # buffer para armazenar o conteúdo do arquivo
+  buffer:              .space 2048  # buffer para armazenar o conteúdo do arquivo
   buffer_ano:          .space  40   # buffer para armazenar o ano do arquivo
   buffer_read_line:    .space 200   # buffer para armazenar linha lida 
 
-  size_buffer:         .word 128 # quantidade de caracteres que o buffer suporta
+  size_buffer:         .word 256 # quantidade de caracteres que o buffer suporta
   size_buffer_line:    .word 25  # quantidade de caracteres que o buffer suporta
   size_ano:            .word 4   # quantidade de caracteres para ano
   size_ignore:         .word 4   # quantidade de caracteres para ignorar informação
